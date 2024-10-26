@@ -1,43 +1,35 @@
 import express from 'express';
 import http from 'http';
+import cors from 'cors';
 import { Server } from 'socket.io';
 import { startMediasoup, router } from './mediasoupServer';
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
-const PORT = 3000;
+// Add CORS configuration here
+app.use(cors({ origin: 'http://localhost:3001', credentials: true }));
+
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3001', // Adjust to match your frontend URL
+    methods: ['GET', 'POST']
+  }
+});
 
 async function initialize() {
-    await startMediasoup();
+  await startMediasoup();
 
-    io.on('connection', (socket) => {
-        console.log('New client connected:', socket.id);
+  io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+    // Your socket event handling logic here
+  });
 
-        // Example event to create a transport
-        socket.on('create-transport', async (_, callback) => {
-            const transport = await router.createWebRtcTransport({
-                listenIps: [{ ip: '0.0.0.0', announcedIp: 'YOUR_PUBLIC_IP' }],
-                enableUdp: true,
-                enableTcp: true,
-                preferUdp: true
-            });
-
-            callback({
-                id: transport.id,
-                iceParameters: transport.iceParameters,
-                iceCandidates: transport.iceCandidates,
-                dtlsParameters: transport.dtlsParameters
-            });
-        });
-    });
-
-    server.listen(PORT, () => {
-        console.log(`Server is running at http://localhost:${PORT}`);
-    });
+  server.listen(3000, () => {
+    console.log('Server is running on http://localhost:3000');
+  });
 }
 
 initialize().catch((error) => {
-    console.error('Error initializing server:', error);
+  console.error('Error initializing server:', error);
 });
